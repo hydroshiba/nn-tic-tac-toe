@@ -62,10 +62,9 @@ def evaluate(agent1, agent2, rounds=1000):
 	losses = [rounds // 2 - wins[0] - draws[0], rounds // 2 - wins[1] - draws[1]]
 	return (wins, draws, losses)
 
-def train(model, games, epochs=1000, batch_size=256):
+def train(model, games, epochs=1000, batch_size=256, optimizer=None):
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-	model = model.to(device)
-	optimizer = optim.Adam(model.parameters(), lr=0.001)
+	model.to(device).train()
 	loss_fn = nn.MSELoss()
 
 	# Flatten all steps across all games into batched tensors once
@@ -97,7 +96,7 @@ def train(model, games, epochs=1000, batch_size=256):
 
 			policy_loss = loss_fn(predictions, targets) * 9 # Scale loss to match reward range
 			value_loss = loss_fn(value.squeeze(), rewards_)
-			loss = policy_loss * 0.9 + value_loss * 0.1
+			loss = policy_loss * 0.5 + value_loss * 0.5
 			optimizer.zero_grad()
 			loss.backward()
 			optimizer.step()
@@ -113,7 +112,7 @@ def train(model, games, epochs=1000, batch_size=256):
 	print(f"Final training loss: {final_loss:.4f}")
 	
 	print("Evaluating against Minimax depth of 3:")
-	model.eval().to("cpu")
+	model.to("cpu").eval()
 	wins, draws, losses = evaluate(agent.Neural(model), agent.Minimax(depth=3), rounds=100)
 	print(f"{'':10} {'as X':>6} {'as O':>6}")
 	print(f"{'Wins':10} {wins[0]:>6} {wins[1]:>6}")
@@ -122,10 +121,10 @@ def train(model, games, epochs=1000, batch_size=256):
 	
 
 if __name__ == "__main__":
-	model = architecture.MLP32()
+	model = architecture.MLP64()
 	agent1 = agent.Neural(model)
 	agent2 = agent.Minimax(depth=4)
-	eval_rounds = 200
+	eval_rounds = 500
 	
 	# Evaluate before training
 	wins, draws, losses = evaluate(agent1, agent2, rounds=eval_rounds)
@@ -138,13 +137,18 @@ if __name__ == "__main__":
 
 	# Play games and train
 	epsilon = 0.7
-	decay = 0.9
+	decay = 0.967
 	games = []
-	for rounds in [128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]:
+	epochs = 10
+	max_epochs = 100
+	optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+	for rounds in [128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072]:
 		print(f"Playing {rounds} games...")
 		games.extend(play(model, rounds=rounds, epsilon=epsilon))
 		epsilon *= decay
-		train(model, games, epochs=100, batch_size=128)
+		train(model, games, epochs=epochs, batch_size=128, optimizer=optimizer)
+		epochs = min(epochs * 2, max_epochs)
 		print("=" * 97)
 
 	# Evaluate after training
@@ -158,4 +162,4 @@ if __name__ == "__main__":
 	print(f"{'Losses':10} {losses[0]:>6} {losses[1]:>6}" f"{(losses[0] + losses[1]) / eval_rounds * 100:>9.2f}%")
 
 	# Save the trained model
-	torch.save(model.state_dict(), "model/mlp32.pth")
+	torch.save(model.state_dict(), "model/mlp64.pth")
