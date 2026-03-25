@@ -1,4 +1,5 @@
-torch
-torchvision
-torchaudio
-tqdm
+--index-url https://download.pytorch.org/whl/cu124
+torch==2.6.0+cu124
+torchvision==0.26.0
+torchaudio==2.11.0
+tqdm==4.67.3

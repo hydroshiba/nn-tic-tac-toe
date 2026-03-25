@@ -62,8 +62,8 @@ def evaluate(agent1, agent2, rounds=1000):
 	losses = [rounds // 2 - wins[0] - draws[0], rounds // 2 - wins[1] - draws[1]]
 	return (wins, draws, losses)
 
-def train(model, games, epochs=1000):
-	device = torch.device("cuda" if torch.cuda.is_available() and len(games) > 5000 else "cpu")
+def train(model, games, epochs=1000, batch_size=256):
+	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	model = model.to(device)
 	optimizer = optim.Adam(model.parameters(), lr=0.001)
 	loss_fn = nn.MSELoss()
@@ -82,24 +82,39 @@ def train(model, games, epochs=1000):
 
 	for epoch in tqdm(range(epochs)):
 		perm     = torch.randperm(len(states), device=device)
-		states_  = states[perm]
-		actions_ = actions[perm]
-		rewards_ = rewards[perm]
+		total_loss = 0.0
+		batches = 0
+  
+		for i in range(0, len(states), batch_size):
+			idx = perm[i:i + batch_size]
+			states_  = states[idx]   # [B, 9]
+			actions_ = actions[idx]  # [B]
+			rewards_ = rewards[idx]  # [B]
+			
+			predictions, value = model(states_)
+			targets = predictions.detach().clone()
+			targets[torch.arange(len(targets), device=device), actions_] = rewards_
 
-		predictions, _ = model(states_)
-		targets = predictions.detach().clone()
-		targets[torch.arange(len(targets), device=device), actions_] = rewards_
+			policy_loss = loss_fn(predictions, targets) * 9 # Scale loss to match reward range
+			value_loss = loss_fn(value.squeeze(), rewards_)
+			loss = policy_loss * 0.9 + value_loss * 0.1
+			optimizer.zero_grad()
+			loss.backward()
+			optimizer.step()
+			
+			total_loss += loss.item()
+			batches += 1
+		
+		if epoch % 10 == 0:
+			tqdm.write(f"Epoch {epoch + 1}/{epochs} — loss: {total_loss / batches:.4f}")
 
-		loss = loss_fn(predictions, targets)
-
-		optimizer.zero_grad()
-		loss.backward()
-		optimizer.step()
-
-		tqdm.write(f"Epoch {epoch + 1}/{epochs} — loss: {loss.item():.6f}")
-
-	print("Evaluating against self play:")
-	wins, draws, losses = evaluate(agent.Neural(model), agent.Neural(model), rounds=100)
+	# Print final loss
+	final_loss = total_loss / batches if batches > 0 else 0.0
+	print(f"Final training loss: {final_loss:.4f}")
+	
+	print("Evaluating against Minimax depth of 3:")
+	model.eval().to("cpu")
+	wins, draws, losses = evaluate(agent.Neural(model), agent.Minimax(depth=3), rounds=100)
 	print(f"{'':10} {'as X':>6} {'as O':>6}")
 	print(f"{'Wins':10} {wins[0]:>6} {wins[1]:>6}")
 	print(f"{'Draws':10} {draws[0]:>6} {draws[1]:>6}")
@@ -109,11 +124,12 @@ def train(model, games, epochs=1000):
 if __name__ == "__main__":
 	model = architecture.MLP32()
 	agent1 = agent.Neural(model)
-	agent2 = agent.Minimax(depth=3)
+	agent2 = agent.Minimax(depth=4)
+	eval_rounds = 200
 	
 	# Evaluate before training
-	wins, draws, losses = evaluate(agent1, agent2, rounds=1000)
-	print("Evaluate against Minimax depth of 3 before training:")
+	wins, draws, losses = evaluate(agent1, agent2, rounds=eval_rounds)
+	print("Evaluate against Minimax depth of 4 before training:")
 	print(f"{'':10} {'as X':>6} {'as O':>6}")
 	print(f"{'Wins':10} {wins[0]:>6} {wins[1]:>6}")
 	print(f"{'Draws':10} {draws[0]:>6} {draws[1]:>6}")
@@ -121,22 +137,25 @@ if __name__ == "__main__":
 	print("=" * 97)
 
 	# Play games and train
-	
-	for rounds in [100, 1000, 5000, 10000, 20000]:
+	epsilon = 0.7
+	decay = 0.9
+	games = []
+	for rounds in [128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]:
 		print(f"Playing {rounds} games...")
-		games = play(model, rounds=rounds)
-		train(model, games, epochs=100)
+		games.extend(play(model, rounds=rounds, epsilon=epsilon))
+		epsilon *= decay
+		train(model, games, epochs=100, batch_size=128)
 		print("=" * 97)
 
 	# Evaluate after training
 	agent1 = agent.Neural(model)
 
-	wins, draws, losses = evaluate(agent1, agent2, rounds=1000)
-	print("Evaluate against Minimax depth of 3 after training:")
-	print(f"{'':10} {'as X':>6} {'as O':>6}")
-	print(f"{'Wins':10} {wins[0]:>6} {wins[1]:>6}")
-	print(f"{'Draws':10} {draws[0]:>6} {draws[1]:>6}")
-	print(f"{'Losses':10} {losses[0]:>6} {losses[1]:>6}")
+	wins, draws, losses = evaluate(agent1, agent2, rounds=eval_rounds)
+	print("Evaluate against Minimax depth of 4 after training:")
+	print(f"{'':10} {'as X':>6} {'as O':>6} {'Percentage':>10}")
+	print(f"{'Wins':10} {wins[0]:>6} {wins[1]:>6} {(wins[0] + wins[1]) / eval_rounds * 100:>9.2f}%")
+	print(f"{'Draws':10} {draws[0]:>6} {draws[1]:>6}" f"{(draws[0] + draws[1]) / eval_rounds * 100:>9.2f}%")
+	print(f"{'Losses':10} {losses[0]:>6} {losses[1]:>6}" f"{(losses[0] + losses[1]) / eval_rounds * 100:>9.2f}%")
 
 	# Save the trained model
 	torch.save(model.state_dict(), "model/mlp32.pth")
