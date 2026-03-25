@@ -13,7 +13,7 @@ class MLP64(nn.Module):
 
 	def forward(self, x):
 		x = self.act(self.hidden1(x))
-		x = self.act(self.hidden1(x))
+		x = self.act(self.hidden2(x))
 		return self.policy(x), nn.Tanh()(self.value(x))
 	
 	def evaluate(self, x):
