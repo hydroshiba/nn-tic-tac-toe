@@ -1,0 +1,44 @@
+(env) root@H100:/home/jovyan/nn-tic-tac-toe$ python test.py
+Evaluating Minimax1 with neural network (MLP 9 -> 64 -> 64 -> 1) against Minimax1 with pruning...
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [00:02<00:00, 46.24it/s]
+             as X   as O
+Wins          100     91
+Draws           0      9
+Losses          0      0
+Evaluating Minimax1 with neural network (MLP 9 -> 64 -> 64 -> 1) against Minimax2 with pruning...
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [00:04<00:00, 22.98it/s]
+             as X   as O
+Wins           55     12
+Draws          45     88
+Losses          0      0
+Evaluating Minimax1 with neural network (MLP 9 -> 64 -> 64 -> 1) against Minimax3 with pruning...
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [00:09<00:00, 10.11it/s]
+             as X   as O
+Wins           46     10
+Draws          54     90
+Losses          0      0
+Evaluating Minimax1 with neural network (MLP 9 -> 64 -> 64 -> 1) against Minimax4 with pruning...
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [00:19<00:00,  5.04it/s]
+             as X   as O
+Wins           50      2
+Draws          50     98
+Losses          0      0
+Evaluating Minimax1 with neural network (MLP 9 -> 64 -> 64 -> 1) against Minimax5 with pruning...
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [00:51<00:00,  1.95it/s]
+             as X   as O
+Wins           46      6
+Draws          54     94
+Losses          0      0
+Evaluating Minimax1 with neural network (MLP 9 -> 64 -> 64 -> 1) against Minimax6 with pruning...
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:32<00:00,  1.08it/s]
+             as X   as O
+Wins            0      0
+Draws         100    100
+Losses          0      0
+Evaluating Minimax1 with neural network (MLP 9 -> 64 -> 64 -> 1) against Minimax7 with pruning...
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100 [03:58<00:00,  2.39s/it]
+             as X   as O
+Wins            0      0
+Draws         100    100
+Losses          0      0
+(env) root@H100:/home/jovyan/nn-tic-tac-toe$ 
