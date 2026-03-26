@@ -8,20 +8,20 @@ class MLP64(nn.Module):
 		self.hidden2 = nn.Linear(64, 64)
 		self.act = nn.ReLU()
 
-		self.policy = nn.Linear(64, 9)
-		self.value = nn.Linear(64, 1)
+		self.policy_head = nn.Linear(64, 9)
+		self.value_head = nn.Linear(64, 1)
 
 	def forward(self, x):
 		x = self.act(self.hidden1(x))
 		x = self.act(self.hidden2(x))
-		return self.policy(x), nn.Tanh()(self.value(x))
+		return self.policy_head(x), nn.Tanh()(self.value_head(x))
 	
 	def evaluate(self, x):
 		with torch.no_grad():
-			_, value = self.forward(x)
-		return value.item()
+			_, val = self.forward(x)
+		return val.item()
 
-	def q_value(self, x):
+	def policy(self, x):
 		with torch.no_grad():
-			policy, _ = self.forward(x)
-		return policy
+			pol, _ = self.forward(x)
+		return pol

@@ -16,7 +16,7 @@ def play(model, rounds=1000, epsilon=0.1):
 
 		while not b.terminal():
 			canonical = b.board * player
-			policy = model.q_value(canonical)
+			policy = model.policy(canonical)
 			move = [i for i in range(9) if b.board[i] == 0][torch.argmax(policy[b.board == 0])]
 			if random.random() < epsilon:
 				move = random.choice([i for i in range(9) if b.board[i] == 0])
@@ -113,7 +113,7 @@ def train(model, games, epochs=1000, batch_size=256, optimizer=None):
 	
 	print("Evaluating against Minimax depth of 3:")
 	model.to("cpu").eval()
-	wins, draws, losses = evaluate(agent.Neural(model), agent.Minimax(depth=3), rounds=100)
+	wins, draws, losses = evaluate(agent.Neural(model), agent.Minimax(depth=3, pruning=True), rounds=100)
 	print(f"{'':10} {'as X':>6} {'as O':>6}")
 	print(f"{'Wins':10} {wins[0]:>6} {wins[1]:>6}")
 	print(f"{'Draws':10} {draws[0]:>6} {draws[1]:>6}")
@@ -123,7 +123,7 @@ def train(model, games, epochs=1000, batch_size=256, optimizer=None):
 if __name__ == "__main__":
 	model = architecture.MLP64()
 	agent1 = agent.Neural(model)
-	agent2 = agent.Minimax(depth=4)
+	agent2 = agent.Minimax(depth=4, pruning=True)
 	eval_rounds = 500
 	
 	# Evaluate before training
