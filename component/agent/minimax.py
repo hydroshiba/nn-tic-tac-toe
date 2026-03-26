@@ -27,6 +27,12 @@ class Minimax:
 		return eval
 
 	def play(self, board, player):
+		if self.depth <= 0:
+			if self.evaluation is not None:
+				moves = board.legal_moves()
+				return moves[self.evaluation.q_value(board.board * player)[moves].argmax()]
+			else: return board.legal_moves()[0]  # Arbitrary legal move
+    
 		eval = float('-inf')
 		best_move = None
 		
