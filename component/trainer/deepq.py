@@ -2,7 +2,7 @@ import torch
 import copy
 from tqdm import tqdm
 
-class DQN:
+class DeepQ:
 	def __init__(self, optimizer, loss_fn, gamma=0.95, target_update_freq=5):
 		self.optimizer = optimizer
 		self.loss_fn = loss_fn
