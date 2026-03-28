@@ -1,15 +1,20 @@
 import torch
+import copy
 from tqdm import tqdm
 
 class DQN:
-	def __init__(self, optimizer, loss_fn, gamma=0.95):
+	def __init__(self, optimizer, loss_fn, gamma=0.95, target_update_freq=5):
 		self.optimizer = optimizer
 		self.loss_fn = loss_fn
 		self.gamma = gamma
+		self.target_update_freq = target_update_freq
 
 	def train(self, model, games, epochs=1000, batch_size=256):
 		device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 		model.to(device).train()
+
+		target_model = copy.deepcopy(model)
+		target_model.eval()
 
 		states, players, moves, next_states, dones, results = [], [], [], [], [], []
 		for game in games:
@@ -31,22 +36,27 @@ class DQN:
 		results = torch.tensor(results).to(device).float()
 
 		for epoch in tqdm(range(epochs)):
+			if epoch % self.target_update_freq == 0:
+				target_model.load_state_dict(model.state_dict())
+
 			perm = torch.randperm(len(states))
 			total_loss = 0.0
 			batches = 0
 
 			for i in range(0, len(states), batch_size):
 				idx = perm[i:i + batch_size]
-				batch_states = states[idx] * players[idx].unsqueeze(1)          # normalize to current player's POV
+				batch_states = states[idx] * players[idx].unsqueeze(1)
 				batch_moves = moves[idx]
-				batch_next_states = next_states[idx] * (-players[idx]).unsqueeze(1)  # normalize to opponent's POV
+				batch_next_states = next_states[idx] * (-players[idx]).unsqueeze(1)
 				batch_dones = dones[idx]
 				batch_results = results[idx]
 
 				# Bellman target: terminal -> result; non-terminal -> gamma * -max Q(s')
 				# Negate opponent's best Q because the game is zero-sum
 				with torch.no_grad():
-					next_preds, _ = model(batch_next_states)
+					next_preds, _ = target_model(batch_next_states)
+					illegal_mask = (batch_next_states != 0)
+					next_preds[illegal_mask] = float('-inf')
 					max_next_q = next_preds.max(dim=1).values
 					q_values = batch_results * batch_dones - self.gamma * max_next_q * (1 - batch_dones)
 
@@ -55,6 +65,7 @@ class DQN:
 
 				self.optimizer.zero_grad()
 				loss.backward()
+				torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 				self.optimizer.step()
 
 				total_loss += loss.item()
