@@ -45,14 +45,8 @@ def evaluate(agent1, agent2, rounds=1000):
 	
 
 if __name__ == "__main__":
-	model = architecture.MLP32()
-	eval_rounds = 2000
-	
-	# Evaluate before training
-	print("Evaluate against Minimax depth of 4 before training:")
-	evaluate(agent.Neural(model), agent.Minimax(depth=4, pruning=True), rounds=eval_rounds//2)
-	print("=" * 97)
-	print()
+	model = architecture.MLP64()
+	eval_rounds = 1000
 
 	# Play games and train
 	epsilon = 0.7
@@ -60,10 +54,11 @@ if __name__ == "__main__":
 	games = []
 	epochs = 10
 	max_epochs = 100
+	buffer = 32768
 	optimizer = optim.Adam(model.parameters(), lr=0.001)
  
 	sim = simulator.EpsilonGreedy(epsilon=epsilon, decay=decay)
-	trn = trainer.DQN(optimizer, loss.MSEDual())
+	trn = trainer.DeepQ(optimizer, loss.MSEDual())
  
 	print("Training the model with self-play")
 	print(f"Self-play method: {sim.__class__.__name__}")
@@ -71,9 +66,10 @@ if __name__ == "__main__":
 	print(f"Loss function: {trn.loss_fn.__class__.__name__}")
 	print("=" * 97)
 
-	for rounds in [128, 256, 512, 1024, 2048, 4096, 8192, 16384]:
+	for i, rounds in enumerate([128, 256, 512, 1024, 2048, 4096, 8192, 8192, 8192, 8192, 8192, 8192, 8192]):
 		print(f"Playing {rounds} games...")
 		games.extend(sim.simulate(agent.Neural(model), rounds=rounds))
+		games = games[-buffer:]
 		trn.train(model, games, epochs=epochs, batch_size=128)
 		epochs = min(epochs * 2, max_epochs)
 		print("Evaluate against Minimax depth of 3:")
@@ -83,7 +79,7 @@ if __name__ == "__main__":
 
 	# Evaluate after training
 	print("Evaluate against Minimax depth of 4 after training:")
-	evaluate(agent.Neural(model), agent.Minimax(depth=4, pruning=True), rounds=eval_rounds//2)
+	evaluate(agent.Neural(model), agent.Minimax(depth=4, pruning=True), rounds=eval_rounds)
 
 	# Save the trained model
-	# torch.save(model.state_dict(), "model/mlp32.pth")
+	torch.save(model.state_dict(), "model/mlp64_deepq.pth")
