@@ -1,0 +1,6 @@
+[
+  "mlp32.onnx",
+  "mlp32_deepq.onnx",
+  "mlp64.onnx",
+  "mlp64_deepq.onnx"
+]
